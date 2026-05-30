@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>East Picacho ES – Submittal Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.5.0/tabler-icons.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+/* ── Reset & base ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--surface:#fff;--surface2:#fafaf8;
+  --border:#e4e2dc;--border2:#cdcbc4;
+  --text:#18170f;--text2:#64625a;--text3:#9e9b93;
+  --accent:#1a5c3a;--accent-h:#145030;--accent-light:#e6f2ec;--accent-mid:#2d7a52;
+  --warn-bg:#fff7e0;--warn:#8a5c09;
+  --info-bg:#e6eefb;--info:#1a44a8;
+  --success-bg:#e6f2ec;--success:#1a5c3a;
+  --danger-bg:#fce8e8;--danger:#b01c1c;
+  --r:6px;--rl:10px;--rxl:14px;
+  --font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
+  --shadow:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.05);
+}
+[data-theme="dark"]{
+  --bg:#111318;--surface:#1c1f2a;--surface2:#22263a;
+  --border:#2e3248;--border2:#3c4060;
+  --text:#e6e4dc;--text2:#8e8c84;--text3:#5a5850;
+  --accent:#2d8a5a;--accent-h:#247a4e;--accent-light:#1a2e24;--accent-mid:#3a9e6a;
+  --warn-bg:#2a2010;--warn:#d4960a;
+  --info-bg:#0f1e3a;--info:#5b8fe8;
+  --success-bg:#0f2018;--success:#2d8a5a;
+  --danger-bg:#2a0f0f;--danger:#e05252;
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15px;min-height:100vh}
+h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+
+/* ── Form elements ── */
+input,select,textarea{
+  font-family:var(--font);font-size:14px;border-radius:var(--r);
+  border:1px solid var(--border2);background:var(--surface);
+  color:var(--text);padding:9px 12px;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+  width:100%;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(26,92,58,.12);
+}
+textarea{resize:vertical;font-family:var(--font)}
+label{font-size:13px;color:var(--text2);display:block;margin-bottom:5px;font-weight:500}
+
+/* ── Buttons ── */
+button{
+  font-family:var(--font);font-size:14px;font-weight:500;
+  cursor:pointer;border-radius:var(--r);
+  border:1px solid var(--border2);background:var(--surface);
+  color:var(--text);padding:8px 16px;
+  transition:background .12s,border-color .12s,box-shadow .12s;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+}
+button:hover:not(:disabled){background:var(--bg)}
+button:active:not(:disabled){transform:scale(.99)}
+button.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.pri:hover:not(:disabled){background:var(--accent-h);border-color:var(--accent-h)}
+button.danger{background:var(--danger-bg);color:var(--danger);border-color:var(--danger)}
+button.danger:hover:not(:disabled){background:#f8d0d0}
+button.ghost{border-color:transparent;background:transparent}
+button.ghost:hover:not(:disabled){background:var(--bg)}
+button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* ── Cards & layout ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);box-shadow:var(--shadow)}
+.card-inset{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r)}
+.sg{display:flex;flex-direction:column;gap:14px}
+.sg2{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;font-size:12px;font-weight:500;padding:3px 10px;border-radius:99px;white-space:nowrap;gap:4px}
+.badge-warn{background:var(--warn-bg);color:var(--warn)}
+.badge-info{background:var(--info-bg);color:var(--info)}
+.badge-success{background:var(--success-bg);color:var(--success)}
+.badge-danger{background:var(--danger-bg);color:var(--danger)}
+.badge-gray{background:#ededea;color:var(--text2)}
+.badge-admin{background:#1a5c3a;color:#fff}
+
+/* ── Table ── */
+table{border-collapse:collapse;width:100%}
+th{text-align:left;font-size:12px;color:var(--text2);font-weight:600;
+   text-transform:uppercase;letter-spacing:.06em;
+   padding:11px 14px;border-bottom:1px solid var(--border);
+   background:var(--surface2);white-space:nowrap}
+td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface2)}
+
+/* ── Nav tabs ── */
+.tab{font-size:14px;padding:7px 16px;cursor:pointer;background:transparent;
+     border:1px solid transparent;border-radius:var(--r);font-weight:400;
+     color:var(--text2);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.tab.active{background:var(--surface);border-color:var(--border2);font-weight:500;color:var(--text);box-shadow:var(--shadow)}
+
+/* ── Upload drop zone ── */
+.dropzone{border:1.5px dashed var(--border2);border-radius:var(--r);padding:24px;
+          text-align:center;cursor:pointer;transition:border-color .15s,background .15s;
+          color:var(--text2);font-size:14px;background:var(--surface)}
+.dropzone:hover,.dropzone.over{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast-item{background:var(--text);color:#fff;padding:11px 18px;border-radius:var(--r);
+            font-size:14px;opacity:0;transform:translateY(8px);
+            transition:opacity .25s,transform .25s;pointer-events:none}
+.toast-item.show{opacity:1;transform:translateY(0)}
+.toast-item.success{background:var(--accent)}
+.toast-item.error{background:var(--danger)}
+
+/* ── Modal ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);
+          display:flex;align-items:center;justify-content:center;z-index:500;padding:20px}
+.modal{background:var(--surface);border-radius:var(--rxl);padding:28px;
+       width:100%;max-width:480px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+
+/* ── Divider ── */
+.divider{height:1px;background:var(--border);margin:4px 0}
+
+/* ── Stat card ── */
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);
+           padding:18px 20px;flex:1;min-width:130px;box-shadow:var(--shadow)}
+</style>
+</head>
+<body>
+<h2 class="sr-only">East Picacho ES – HVAC &amp; Reroof Submittal Exchange Portal</h2>
+<div id="root"></div>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════════════════════════════
+   FIREBASE CONFIG — replace ALL values with your own project's keys
+   1. Go to https://console.firebase.google.com → Create project
+   2. Click the </> (Web) icon to add a web app → copy the config below
+   3. In the left panel go to Build → Realtime Database → Create database
+      (choose "Start in test mode" so anyone with the link can read/write)
+   ══════════════════════════════════════════════════════════════════ */
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyCt0qbQcH69X2MDD83GvB3vEmhxIpxUBP4",
+  authDomain:        "esa-east-picacho.firebaseapp.com",
+  databaseURL:       "https://esa-east-picacho-default-rtdb.firebaseio.com",
+  projectId:         "esa-east-picacho",
+  storageBucket:     "esa-east-picacho.firebasestorage.app",
+  messagingSenderId: "1059632937900",
+  appId:             "1:1059632937900:web:ff661b1d5b509584569809",
+  measurementId:     "G-22DD7FNXKQ",
+};
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
+
+/* ── Firebase async helpers ─────────────────────────────────────── */
+async function fbGetUsers(){
+  const snap = await db.ref('ep_users').get();
+  return snap.exists() ? JSON.parse(snap.val()) : {};
+}
+async function fbSetUsers(obj){
+  await db.ref('ep_users').set(JSON.stringify(obj));
+}
+async function fbGetSubmittals(){
+  const snap = await db.ref('ep_submittals').get();
+  return snap.exists() ? JSON.parse(snap.val()) : [];
+}
+async function fbSetSubmittals(arr){
+  await db.ref('ep_submittals').set(JSON.stringify(arr));
+}
+
+const {useState,useEffect,useRef,useCallback,useMemo}=React;
+
+/* ══════════════════════════════════════════════════════════════════
+   CONFIGURATION — fill these in after setting up EmailJS
+   ══════════════════════════════════════════════════════════════════ */
+const EMAILJS_CONFIG={
+  publicKey:   '-bi9TS7wKHmWj_Iv3',   // from EmailJS → Account → General
+  serviceId:   'service_7d9vp9p',           // from EmailJS → Email Services
+  templateId:  'template_nerknkn',          // from EmailJS → Email Templates
+};
+
+/* Admin account — change this email/password before deploying */
+const ADMIN_EMAIL='admin@gmail.com';
+const ADMIN_PASS='Admin1234';
+
+/* ── Cloudinary file storage ──────────────────────────────────────────
+   1. Go to https://cloudinary.com and create a free account.
+   2. From your Dashboard copy your Cloud Name into cloudName below.
+   3. Go to Settings → Upload → Upload presets → Add upload preset.
+      Set Signing Mode to "Unsigned" and save. Copy the preset name below.
+   Leave both values as empty strings '' to fall back to local base64 (5 MB limit).
+   ─────────────────────────────────────────────────────────────────── */
+const CLOUDINARY_CONFIG={
+  cloudName:   'dju7slwij',
+  uploadPreset:'ni9kv4sx',
+};
+function cloudinaryReady(){return !!(CLOUDINARY_CONFIG.cloudName&&CLOUDINARY_CONFIG.uploadPreset);}
+async function uploadToCloudinary(file){
+  const fd=new FormData();
+  fd.append('file',file);
+  fd.append('upload_preset',CLOUDINARY_CONFIG.uploadPreset);
+  const res=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`,{method:'POST',body:fd});
+  const json=await res.json();
+  if(!res.ok){
+    const msg=json?.error?.message||('HTTP '+res.status);
+    throw new Error(msg);
+  }
+  return{name:file.name,type:file.type,size:file.size,url:json.secure_url};
+}
+
+const PROJECT='East Picacho ES – HVAC & Reroof';
+const OWNER='Las Cruces Public Schools';
+const NOTIFY_INTERVAL_DAYS=2;
+
+/* ══════════════════════════════════════════════════════════════════
+   SPEC SECTIONS
+   ══════════════════════════════════════════════════════════════════ */
+const SPEC_SECTIONS=[
+  {div:'02',divName:'Existing Conditions',section:'024119',title:'Selective Demolition'},
+  {div:'05',divName:'Metals',section:'055000',title:'Metal Fabrications'},
+  {div:'06',divName:'Woods, Plastics & Composites',section:'061000',title:'Rough Carpentry'},
+  {div:'07',divName:'Thermal & Moisture Protection',section:'075400',title:'Thermoplastic Membrane Roofing – 80 mil'},
+  {div:'07',divName:'Thermal & Moisture Protection',section:'076200',title:'Sheet Metal Flashing and Trim'},
+  {div:'07',divName:'Thermal & Moisture Protection',section:'076500',title:'Flexible Flashings'},
+  {div:'07',divName:'Thermal & Moisture Protection',section:'077233',title:'Roof Hatch'},
+  {div:'07',divName:'Thermal & Moisture Protection',section:'078400',title:'Fire Stopping'},
+  {div:'07',divName:'Thermal & Moisture Protection',section:'079200',title:'Joint Sealants'},
+  {div:'08',divName:'Openings',section:'083113',title:'Access Doors'},
+  {div:'08',divName:'Openings',section:'086200',title:'Skylights'},
+  {div:'09',divName:'Finishes',section:'092216',title:'Non-Structural Metal Framing'},
+  {div:'09',divName:'Finishes',section:'092900',title:'Gypsum Board'},
+  {div:'09',divName:'Finishes',section:'095100',title:'Acoustical Ceilings'},
+  {div:'09',divName:'Finishes',section:'099100',title:'Painting and Coating'},
+  {div:'22',divName:'Plumbing',section:'220000',title:'Basic Mechanical Requirements'},
+  {div:'22',divName:'Plumbing',section:'220529',title:'Supports and Anchors'},
+  {div:'22',divName:'Plumbing',section:'220553',title:'Mechanical Identification'},
+  {div:'22',divName:'Plumbing',section:'220700',title:'Plumbing Insulation'},
+  {div:'22',divName:'Plumbing',section:'221000',title:'Plumbing Piping'},
+  {div:'23',divName:'HVAC',section:'230593',title:'Owner TAB'},
+  {div:'23',divName:'HVAC',section:'230713',title:'Ductwork Insulation'},
+  {div:'23',divName:'HVAC',section:'230810',title:'Performance Assurance for HVAC'},
+  {div:'23',divName:'HVAC',section:'230900',title:'Automatic Temperature Controls (DDC)'},
+  {div:'23',divName:'HVAC',section:'233100',title:'Ductwork'},
+  {div:'23',divName:'HVAC',section:'233300',title:'Ductwork Accessories'},
+  {div:'23',divName:'HVAC',section:'238100',title:'Packaged Rooftop ACUs'},
+  {div:'26',divName:'Electrical',section:'260000',title:'Electrical General Provisions'},
+  {div:'26',divName:'Electrical',section:'260503',title:'Equipment Wiring System'},
+  {div:'26',divName:'Electrical',section:'260519',title:'Wires and Cables'},
+  {div:'26',divName:'Electrical',section:'260526',title:'Grounding'},
+  {div:'26',divName:'Electrical',section:'260529',title:'Supporting Devices'},
+  {div:'26',divName:'Electrical',section:'260530',title:'Electrical Boxes and Fittings'},
+  {div:'26',divName:'Electrical',section:'260535',title:'Raceways'},
+  {div:'26',divName:'Electrical',section:'260553',title:'Electrical Identification'},
+  {div:'26',divName:'Electrical',section:'262416',title:'Panelboards'},
+  {div:'26',divName:'Electrical',section:'262419',title:'Motor and Circuit Disconnects'},
+  {div:'26',divName:'Electrical',section:'262716',title:'Cabinets and Enclosures'},
+  {div:'26',divName:'Electrical',section:'262816',title:'Circuit Breakers'},
+  {div:'26',divName:'Electrical',section:'265100',title:'Interior Luminaires'},
+];
+
+const STATUSES=[
+  {value:'Pending',          label:'Pending Review',    cls:'badge-warn'},
+  {value:'Under Review',     label:'Under Review',      cls:'badge-info'},
+  {value:'Approved',         label:'Approved',          cls:'badge-success'},
+  {value:'Approved as Noted',label:'Approved as Noted', cls:'badge-success'},
+  {value:'Revise & Resubmit',label:'Revise & Resubmit', cls:'badge-danger'},
+  {value:'Rejected',         label:'Rejected',          cls:'badge-danger'},
+];
+
+const ROLES=['General Contractor','Subcontractor','Supplier','Owner','Architect/Engineer'];
+const DIVISIONS=[...new Set(SPEC_SECTIONS.map(s=>s.div))];
+
+/* ══════════════════════════════════════════════════════════════════
+   STORAGE  (localStorage — works in any hosted HTML file)
+   ══════════════════════════════════════════════════════════════════ */
+const LS={
+  get(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch{return null}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}},
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   TOAST
+   ══════════════════════════════════════════════════════════════════ */
+function toast(msg,type=''){
+  const el=document.createElement('div');
+  el.className='toast-item'+(type?' '+type:'');
+  el.textContent=msg;
+  document.getElementById('toast').appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),300)},3500);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   EMAIL  (EmailJS)
+   ══════════════════════════════════════════════════════════════════ */
+function emailJsReady(){
+  return EMAILJS_CONFIG.publicKey!=='YOUR_EMAILJS_PUBLIC_KEY';
+}
+
+async function sendEmail(toEmail,toName,subject,body){
+  if(!emailJsReady()){
+    console.warn('EmailJS not configured — skipping email to',toEmail);
+    return false;
+  }
+  try{
+    emailjs.init(EMAILJS_CONFIG.publicKey);
+    await emailjs.send(EMAILJS_CONFIG.serviceId,EMAILJS_CONFIG.templateId,{
+      to_email:toEmail,
+      to_name:toName,
+      subject,
+      message:body,
+      project:PROJECT,
+      owner:OWNER,
+    });
+    return true;
+  }catch(e){
+    console.error('EmailJS error',e);
+    return false;
+  }
+}
+
+/* Check pending submittals and send reminder emails if due */
+async function runNotificationCheck(submittals,users){
+  if(!emailJsReady())return;
+  const now=Date.now();
+  const intervalMs=NOTIFY_INTERVAL_DAYS*24*60*60*1000;
+  const updated=[...submittals];
+  let changed=false;
+
+  for(let i=0;i<updated.length;i++){
+    const s=updated[i];
+    if(s.status!=='Pending'&&s.status!=='Under Review')continue;
+    const lastNotified=s.lastNotified||s.dateSubmittedTs||0;
+    if(now-lastNotified<intervalMs)continue;
+
+    const recipient=users[s.sendTo];
+    if(!recipient?.email)continue;
+
+    const subject=`[Action Required] Submittal #${s.no} – ${s.sectionTitle}`;
+    const body=`Hi ${recipient.name},\n\nYou have a submittal pending your review:\n\n`+
+      `  Submittal #:  ${s.no}\n`+
+      `  Section:      ${s.specSection} – ${s.sectionTitle}\n`+
+      `  Description:  ${s.description}\n`+
+      `  Submitted by: ${s.submittedBy} (${s.company})\n`+
+      `  Date:         ${s.dateSubmitted}\n\n`+
+      `Please log in to the portal to review and approve or return this submittal https://noemln.github.io/vigilant-bassoon/.\n\n`+
+      `${PROJECT}\n${OWNER}`;
+
+    const ok=await sendEmail(recipient.email,recipient.name,subject,body);
+    if(ok){
+      updated[i]={...s,lastNotified:now};
+      changed=true;
+    }
+  }
+  if(changed)await fbSetSubmittals(updated);
+  return updated;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   UTILITIES
+   ══════════════════════════════════════════════════════════════════ */
+function toBase64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result);
+    r.onerror=rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function fmtDate(ts){
+  return new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+function daysSince(ts){
+  return Math.floor((Date.now()-ts)/(1000*60*60*24));
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SMALL UI COMPONENTS
+   ══════════════════════════════════════════════════════════════════ */
+function Badge({status}){
+  const cfg=STATUSES.find(s=>s.value===status)||STATUSES[0];
+  return React.createElement('span',{className:'badge '+cfg.cls},cfg.label);
+}
+
+function Avatar({name,size=32,isAdmin}){
+  const initials=(name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  return React.createElement('div',{
+    style:{width:size,height:size,borderRadius:'50%',
+           background:isAdmin?'#1a5c3a':'var(--accent-light)',
+           color:isAdmin?'#fff':'var(--accent)',
+           display:'flex',alignItems:'center',justifyContent:'center',
+           fontWeight:600,fontSize:size*0.35,flexShrink:0,fontFamily:'var(--mono)'}
+  },initials);
+}
+
+function Spinner(){
+  return React.createElement('span',{style:{display:'inline-block',width:14,height:14,
+    border:'2px solid rgba(255,255,255,.4)',borderTopColor:'#fff',
+    borderRadius:'50%',animation:'spin .6s linear infinite'}});
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   AUTH SCREEN
+   ══════════════════════════════════════════════════════════════════ */
+function AuthScreen({onAuth}){
+  const [mode,setMode]=useState('login');
+  const [f,setF]=useState({name:'',company:'',role:ROLES[0],email:'',pass:'',pass2:''});
+  const [err,setErr]=useState('');
+  const [loading,setLoading]=useState(false);
+  const upd=k=>e=>setF(p=>({...p,[k]:e.target.value}));
+
+  const handleSignup=async()=>{
+    setErr('');setLoading(true);
+    if(!f.name.trim()||!f.company.trim()||!f.email.trim()||!f.pass){setLoading(false);return setErr('All fields are required.');}
+    if(f.pass.length<6){setLoading(false);return setErr('Password must be at least 6 characters.');}
+    if(f.pass!==f.pass2){setLoading(false);return setErr('Passwords do not match.');}
+    const users=await fbGetUsers();
+    const key=f.email.trim().toLowerCase();
+    if(users[key]){setLoading(false);return setErr('An account with that email already exists.');}
+    const user={id:'u_'+Date.now(),name:f.name.trim(),company:f.company.trim(),
+                role:f.role,email:key,passHash:btoa(unescape(encodeURIComponent(f.pass))),isAdmin:false};
+    users[key]=user;
+    await fbSetUsers(users);
+    toast('Account created — welcome!','success');
+    onAuth(user);
+    setLoading(false);
+  };
+
+  const handleLogin=async()=>{
+    setErr('');setLoading(true);
+    if(!f.email.trim()||!f.pass){setLoading(false);return setErr('Email and password required.');}
+    /* admin shortcut */
+    if(f.email.trim().toLowerCase()===ADMIN_EMAIL.toLowerCase()&&f.pass===ADMIN_PASS){
+      onAuth({id:'admin',name:'Admin',company:OWNER,role:'Admin',email:ADMIN_EMAIL,isAdmin:true});
+      setLoading(false);return;
+    }
+    const users=await fbGetUsers();
+    const key=f.email.trim().toLowerCase();
+    const user=users[key];
+    if(!user||user.passHash!==btoa(unescape(encodeURIComponent(f.pass)))){setLoading(false);return setErr('Incorrect email or password.');}
+    toast('Welcome back, '+user.name+'!','success');
+    onAuth(user);
+    setLoading(false);
+  };
+
+  const submit=()=>mode==='login'?handleLogin():handleSignup();
+
+  return React.createElement('div',{style:{maxWidth:420,margin:'60px auto',padding:'0 20px'}},
+    React.createElement('div',{className:'card',style:{padding:'36px'}},
+      React.createElement('div',{style:{marginBottom:26}},
+        React.createElement('div',{style:{fontFamily:'var(--mono)',fontSize:10,fontWeight:500,color:'var(--text3)',letterSpacing:'.12em',textTransform:'uppercase',marginBottom:8}},OWNER),
+        React.createElement('div',{style:{fontSize:22,fontWeight:600,letterSpacing:'-.4px',lineHeight:1.2}},PROJECT),
+        React.createElement('div',{style:{fontSize:13,color:'var(--text2)',marginTop:6}},'Submittal Exchange Portal')
+      ),
+      React.createElement('div',{style:{display:'flex',gap:4,marginBottom:22,background:'var(--bg)',borderRadius:'var(--r)',padding:4}},
+        ['login','signup'].map(m=>React.createElement('button',{key:m,onClick:()=>{setMode(m);setErr('');},
+          style:{flex:1,padding:'7px',fontSize:13,border:'none',borderRadius:'var(--r)',cursor:'pointer',
+                 background:mode===m?'var(--surface)':'transparent',
+                 fontWeight:mode===m?600:400,color:mode===m?'var(--text)':'var(--text2)',
+                 transition:'background .15s',boxShadow:mode===m?'0 1px 3px rgba(0,0,0,.08)':'none'}},
+          m==='login'?'Sign in':'Create account'))
+      ),
+      err&&React.createElement('div',{style:{background:'var(--danger-bg)',color:'var(--danger)',borderRadius:'var(--r)',padding:'9px 12px',fontSize:12,marginBottom:14,display:'flex',alignItems:'center',gap:6}},
+        React.createElement('i',{className:'ti ti-alert-circle',style:{fontSize:14}}),err),
+      React.createElement('div',{className:'sg'},
+        mode==='signup'&&React.createElement('div',null,
+          React.createElement('label',null,'Full name'),
+          React.createElement('input',{value:f.name,onChange:upd('name'),placeholder:'Jane Smith'})),
+        mode==='signup'&&React.createElement('div',null,
+          React.createElement('label',null,'Company'),
+          React.createElement('input',{value:f.company,onChange:upd('company'),placeholder:'Company name'})),
+        mode==='signup'&&React.createElement('div',null,
+          React.createElement('label',null,'Role'),
+          React.createElement('select',{value:f.role,onChange:upd('role')},
+            ROLES.map(r=>React.createElement('option',{key:r},r)))),
+        React.createElement('div',null,
+          React.createElement('label',null,'Email address'),
+          React.createElement('input',{value:f.email,onChange:upd('email'),placeholder:'you@company.com',type:'email'})),
+        React.createElement('div',null,
+          React.createElement('label',null,'Password'),
+          React.createElement('input',{value:f.pass,onChange:upd('pass'),placeholder:mode==='signup'?'Min. 6 characters':'Password',type:'password'})),
+        mode==='signup'&&React.createElement('div',null,
+          React.createElement('label',null,'Confirm password'),
+          React.createElement('input',{value:f.pass2,onChange:upd('pass2'),placeholder:'Repeat password',type:'password',
+            onKeyDown:e=>e.key==='Enter'&&submit()})),
+        React.createElement('button',{className:'pri',onClick:submit,disabled:loading,
+          style:{padding:'10px',fontSize:14,marginTop:4,justifyContent:'center'}},
+          loading?React.createElement(Spinner):null,
+          mode==='login'?'Sign in →':'Create account →')
+      )
+    )
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   FILE DROP ZONE
+   ══════════════════════════════════════════════════════════════════ */
+function FileDropZone({onFile,file}){
+  const [over,setOver]=useState(false);
+  const [uploading,setUploading]=useState(false);
+  const [progress,setProgress]=useState('');
+  const inp=useRef();
+  const handle=async f=>{
+    if(!f)return;
+    const limitMB=cloudinaryReady()?100:5;
+    if(f.size>limitMB*1024*1024){toast('File must be under '+limitMB+' MB.','error');return;}
+    setUploading(true);
+    setProgress('Uploading…');
+    try{
+      if(cloudinaryReady()){
+        const attachment=await uploadToCloudinary(f);
+        onFile(attachment);
+        setProgress('');
+      }else{
+        setProgress('Saving locally…');
+        if(f.size>5*1024*1024){toast('Configure Cloudinary to support files over 5 MB.','error');setUploading(false);setProgress('');return;}
+        const data=await toBase64(f);
+        onFile({name:f.name,type:f.type,size:f.size,data});
+        setProgress('');
+      }
+    }catch(e){
+      console.error(e);
+      toast('Upload failed — '+e.message,'error');
+      setProgress('');
+    }
+    setUploading(false);
+  };
+  return React.createElement('div',null,
+    React.createElement('div',{
+      className:'dropzone'+(over?' over':''),
+      onClick:()=>!uploading&&inp.current.click(),
+      onDragOver:e=>{e.preventDefault();setOver(true)},
+      onDragLeave:()=>setOver(false),
+      onDrop:e=>{e.preventDefault();setOver(false);handle(e.dataTransfer.files[0])},
+      style:{cursor:uploading?'wait':'pointer'},
+    },
+      uploading
+        ?React.createElement('div',{style:{color:'var(--accent)',display:'flex',alignItems:'center',gap:8,justifyContent:'center'}},
+            React.createElement('span',{style:{display:'inline-block',width:16,height:16,border:'2px solid var(--accent-light)',borderTopColor:'var(--accent)',borderRadius:'50%',animation:'spin .6s linear infinite'}}),
+            React.createElement('span',null,progress||'Uploading…'))
+        :file
+          ?React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8,justifyContent:'center',color:'var(--accent)'}},
+              React.createElement('i',{className:'ti ti-paperclip',style:{fontSize:16}}),
+              React.createElement('span',{style:{fontWeight:500}},file.name),
+              React.createElement('span',{style:{color:'var(--text3)',fontSize:11}},'('+Math.round(file.size/1024)+' KB'+(file.url?' · ☁ Cloud':' · local')+')'),
+              React.createElement('button',{onClick:e=>{e.stopPropagation();onFile(null);},
+                style:{border:'none',background:'none',color:'var(--danger)',padding:'2px 6px',fontSize:13,cursor:'pointer'}},'✕'))
+          :React.createElement('div',null,
+              React.createElement('i',{className:'ti ti-upload',style:{fontSize:20,display:'block',marginBottom:4}}),
+              'Click or drag to attach a file',
+              React.createElement('div',{style:{fontSize:11,marginTop:2,color:'var(--text3)'}},
+                cloudinaryReady()?'PDF, DWG, images — up to 100 MB via Cloudinary':'PDF, DWG, images — max 5 MB (configure Cloudinary for larger files)'))
+    ),
+    React.createElement('input',{ref:inp,type:'file',style:{display:'none'},onChange:e=>handle(e.target.files[0])})
+  );
+}
+
+function FileDownloadBtn({attachment}){
+  if(!attachment)return null;
+  const open=()=>{
+    if(attachment.url){
+      /* Cloudinary URL — open in new tab (direct download link) */
+      const a=document.createElement('a');
+      a.href=attachment.url;
+      a.target='_blank';
+      a.download=attachment.name;
+      a.click();
+    }else if(attachment.data){
+      /* Legacy base64 fallback */
+      const a=document.createElement('a');
+      a.href=attachment.data;
+      a.download=attachment.name;
+      a.click();
+    }
+  };
+  return React.createElement('button',{onClick:open,
+    style:{fontSize:11,padding:'3px 10px',color:'var(--info)',borderColor:'var(--info)'}},
+    React.createElement('i',{className:'ti ti-download',style:{fontSize:12}}),attachment.name);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DASHBOARD
+   ══════════════════════════════════════════════════════════════════ */
+function StatCard({icon,label,value,accent}){
+  return React.createElement('div',{className:'stat-card'},
+    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+      React.createElement('span',{style:{fontSize:11,color:'var(--text2)',fontWeight:500}},label),
+      React.createElement('i',{className:'ti '+icon,style:{fontSize:15,color:accent||'var(--text3)'}})),
+    React.createElement('div',{style:{fontSize:28,fontWeight:600,marginTop:6,color:accent||'var(--text)'}},value));
+}
+
+function Dashboard({stats,submittals,setView}){
+  const recent=[...submittals].sort((a,b)=>b.id-a.id).slice(0,7);
+  return React.createElement('div',null,
+    React.createElement('div',{style:{display:'flex',gap:10,marginBottom:20,flexWrap:'wrap'}},
+      React.createElement(StatCard,{icon:'ti-file-description',label:'Total submittals',value:stats.total}),
+      React.createElement(StatCard,{icon:'ti-clock',label:'Pending review',value:stats.pending,accent:'var(--warn)'}),
+      React.createElement(StatCard,{icon:'ti-circle-check',label:'Approved',value:stats.approved,accent:'var(--success)'}),
+      React.createElement(StatCard,{icon:'ti-alert-triangle',label:'Needs action',value:stats.needsAction,accent:'var(--danger)'})),
+    React.createElement('div',{className:'card'},
+      React.createElement('div',{style:{padding:'12px 16px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center'}},
+        React.createElement('span',{style:{fontWeight:600}},'Recent activity'),
+        React.createElement('button',{className:'ghost',onClick:()=>setView('log'),style:{fontSize:12,color:'var(--accent)'}},'View all →')),
+      recent.length===0
+        ?React.createElement('div',{style:{padding:'40px',textAlign:'center',color:'var(--text3)',fontSize:13}},'No submittals yet.')
+        :React.createElement('div',null,recent.map((s,i)=>
+          React.createElement('div',{key:s.id,style:{padding:'11px 16px',borderBottom:i<recent.length-1?'1px solid var(--border)':'none',display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}},
+            React.createElement('div',{style:{flex:1,minWidth:0}},
+              React.createElement('div',{style:{fontSize:13,fontWeight:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},
+                React.createElement('span',{style:{fontFamily:'var(--mono)',color:'var(--text3)',marginRight:8,fontSize:11}},s.specSection),s.sectionTitle),
+              React.createElement('div',{style:{fontSize:11,color:'var(--text3)',marginTop:2}},
+                s.submittedBy,' → ',React.createElement('strong',null,s.sendToName||'—'),' · ',s.dateSubmitted)),
+            React.createElement(Badge,{status:s.status}))))));
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SUBMIT FORM
+   ══════════════════════════════════════════════════════════════════ */
+function SubmitForm({form,setForm,onSubmit,onAiAssist,submitting,aiLoading,user,allUsers}){
+  const grouped=DIVISIONS.map(div=>{
+    const s0=SPEC_SECTIONS.find(s=>s.div===div);
+    return{div,divName:s0?.divName||'',sections:SPEC_SECTIONS.filter(s=>s.div===div)};
+  });
+  const selected=SPEC_SECTIONS.find(s=>s.section===form.specSection);
+  const ok=form.specSection&&form.description.trim()&&form.sendTo;
+  const recipients=allUsers.filter(u=>u.id!==user.id&&!u.isAdmin);
+
+  return React.createElement('div',{style:{maxWidth:760}},
+    React.createElement('div',{style:{fontSize:17,fontWeight:600,marginBottom:18,letterSpacing:'-.2px'}},'New submittal'),
+    React.createElement('div',{className:'card',style:{padding:'28px'}},
+      React.createElement('div',{className:'sg'},
+        /* Spec section */
+        React.createElement('div',null,
+          React.createElement('label',null,'Spec section ',React.createElement('span',{style:{color:'var(--danger)'}},'\u2217')),
+          React.createElement('select',{value:form.specSection,onChange:e=>setForm(f=>({...f,specSection:e.target.value}))},
+            React.createElement('option',{value:''},'— Select spec section —'),
+            grouped.map(g=>React.createElement('optgroup',{key:g.div,label:'Division '+g.div+' – '+g.divName},
+              g.sections.map(s=>React.createElement('option',{key:s.section,value:s.section},s.section+' – '+s.title)))))),
+        /* Send to */
+        React.createElement('div',null,
+          React.createElement('label',null,'Send to ',React.createElement('span',{style:{color:'var(--danger)'}},'\u2217')),
+          React.createElement('select',{value:form.sendTo,onChange:e=>setForm(f=>({...f,sendTo:e.target.value}))},
+            React.createElement('option',{value:''},'— Select recipient —'),
+            recipients.map(u=>React.createElement('option',{key:u.id,value:u.id},u.name+' ('+u.company+' · '+u.role+')'))),
+          recipients.length===0&&React.createElement('div',{style:{fontSize:11,color:'var(--text3)',marginTop:5}},
+            React.createElement('i',{className:'ti ti-info-circle',style:{marginRight:4}}),'No other registered users yet.')),
+        /* Description + AI */
+        React.createElement('div',null,
+          React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
+            React.createElement('label',{style:{marginBottom:0}},'Description ',React.createElement('span',{style:{color:'var(--danger)'}},'\u2217')),
+            React.createElement('button',{onClick:onAiAssist,disabled:!form.description||aiLoading,style:{fontSize:11,padding:'4px 10px'}},
+              React.createElement('i',{className:'ti ti-sparkles',style:{fontSize:12}}),
+              aiLoading?'Detecting…':'AI detect section')),
+          React.createElement('textarea',{value:form.description,onChange:e=>setForm(f=>({...f,description:e.target.value})),
+            placeholder:'e.g. Shop drawings and product data for 80-mil TPO roofing system, Johns Manville…',rows:3}),
+          selected&&React.createElement('div',{style:{fontSize:11,color:'var(--success)',marginTop:5,display:'flex',alignItems:'center',gap:4}},
+            React.createElement('i',{className:'ti ti-circle-check'}),'Matched: '+selected.section+' – '+selected.title)),
+        /* Attachment */
+        React.createElement('div',null,
+          React.createElement('label',null,'Attachment'),
+          React.createElement(FileDropZone,{onFile:f=>setForm(p=>({...p,attachment:f})),file:form.attachment})),
+        /* Notes */
+        React.createElement('div',null,
+          React.createElement('label',null,'Notes'),
+          React.createElement('textarea',{value:form.notes,onChange:e=>setForm(f=>({...f,notes:e.target.value})),
+            placeholder:'Any additional notes for the reviewer…',rows:2})),
+        /* Footer */
+        React.createElement('div',{style:{borderTop:'1px solid var(--border)',paddingTop:16,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}},
+          React.createElement('div',{style:{fontSize:12,color:'var(--text2)'}},
+            'Submitting as ',React.createElement('strong',null,user.name),' · ',user.company),
+          React.createElement('button',{className:'pri',onClick:onSubmit,disabled:!ok||submitting,style:{padding:'9px 22px',fontSize:14}},
+            submitting?[React.createElement(Spinner,{key:'s'}),' Submitting…']:'Submit')))));
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   LOG VIEW
+   ══════════════════════════════════════════════════════════════════ */
+function LogView({submittals,filterDiv,setFilterDiv,filterStatus,setFilterStatus,search,setSearch,canReview,onClickReview}){
+  const exportToExcel=()=>{
+    const rows=submittals.map(s=>({
+      '#':s.no,
+      'Spec Section':s.specSection,
+      'Section Title':s.sectionTitle,
+      'Division':s.division,
+      'Description':s.description,
+      'Submitted By':s.submittedBy,
+      'Company':s.company,
+      'Role':s.role,
+      'Send To':s.sendToName,
+      'Recipient Company':s.sendToCompany,
+      'Date Submitted':s.dateSubmitted,
+      'Status':s.status,
+      'Reviewed By':s.reviewedBy||'',
+      'Date Reviewed':s.dateReviewed||'',
+      'Notes':s.notes||'',
+    }));
+    const ws=XLSX.utils.json_to_sheet(rows);
+    const colWidths=[{wch:5},{wch:14},{wch:30},{wch:8},{wch:40},{wch:20},{wch:22},{wch:20},{wch:20},{wch:22},{wch:14},{wch:18},{wch:20},{wch:14},{wch:30}];
+    ws['!cols']=colWidths;
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Submittal Log');
+    XLSX.writeFile(wb,'Submittal_Log_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  };
+  return React.createElement('div',null,
+    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap',gap:10}},
+      React.createElement('div',{style:{fontSize:17,fontWeight:600}},'Submittal Log'),
+      React.createElement('button',{onClick:exportToExcel,title:'Download current log as Excel file',style:{padding:'9px 18px',fontSize:14,fontWeight:600,background:'#1a5c3a',color:'#fff',border:'none',borderRadius:'var(--r)',display:'flex',alignItems:'center',gap:8,cursor:'pointer',boxShadow:'0 1px 4px rgba(0,0,0,.15)'}},
+        React.createElement('i',{className:'ti ti-file-spreadsheet',style:{fontSize:17}}),
+        'Export Log to Excel')),
+    React.createElement('div',{style:{display:'flex',gap:10,marginBottom:14,flexWrap:'wrap',alignItems:'center'}},
+      React.createElement('input',{value:search,onChange:e=>setSearch(e.target.value),placeholder:'Search…',style:{width:180}}),
+      React.createElement('select',{value:filterDiv,onChange:e=>setFilterDiv(e.target.value),style:{minWidth:160}},
+        React.createElement('option',{value:'all'},'All divisions'),
+        DIVISIONS.map(d=>{
+          const name=SPEC_SECTIONS.find(s=>s.div===d)?.divName||'';
+          return React.createElement('option',{key:d,value:d},'Div '+d+' – '+name);})),
+      React.createElement('select',{value:filterStatus,onChange:e=>setFilterStatus(e.target.value),style:{minWidth:160}},
+        React.createElement('option',{value:'all'},'All statuses'),
+        STATUSES.map(s=>React.createElement('option',{key:s.value,value:s.value},s.label))),
+      React.createElement('span',{style:{fontSize:12,color:'var(--text3)',marginLeft:'auto'}},
+        submittals.length+' item'+(submittals.length!==1?'s':''))),
+    submittals.length===0
+      ?React.createElement('div',{style:{textAlign:'center',padding:'60px',color:'var(--text3)',fontSize:13}},'No submittals match.')
+      :React.createElement('div',{className:'card',style:{overflowX:'auto'}},
+        React.createElement('table',null,
+          React.createElement('thead',null,React.createElement('tr',null,
+            ['#','Section','Description','From','To','Date','File','Status','Reviewed',''].map((h,i)=>
+              React.createElement('th',{key:i},h)))),
+          React.createElement('tbody',null,
+            submittals.map(s=>React.createElement('tr',{key:s.id},
+              React.createElement('td',{style:{fontFamily:'var(--mono)',color:'var(--text3)',fontSize:11}},s.no),
+              React.createElement('td',null,
+                React.createElement('div',{style:{fontFamily:'var(--mono)',fontWeight:500,fontSize:11}},s.specSection),
+                React.createElement('div',{style:{color:'var(--text2)',maxWidth:150,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.sectionTitle)),
+              React.createElement('td',null,
+                React.createElement('div',{style:{maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.description),
+                s.notes&&React.createElement('div',{style:{color:'var(--text3)',fontSize:12,marginTop:2,maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.notes)),
+              React.createElement('td',null,
+                React.createElement('div',{style:{fontWeight:500}},s.submittedBy),
+                React.createElement('div',{style:{color:'var(--text2)'}},s.company)),
+              React.createElement('td',null,
+                React.createElement('div',{style:{fontWeight:500}},s.sendToName||'—'),
+                React.createElement('div',{style:{color:'var(--text2)',fontSize:11}},s.sendToCompany||'')),
+              React.createElement('td',{style:{color:'var(--text3)',whiteSpace:'nowrap'}},s.dateSubmitted),
+              React.createElement('td',null,React.createElement(FileDownloadBtn,{attachment:s.attachment})),
+              React.createElement('td',null,React.createElement(Badge,{status:s.status})),
+              React.createElement('td',{style:{color:'var(--text3)',fontSize:11}},
+                s.reviewedBy||'—',
+                s.dateReviewed&&React.createElement('div',null,s.dateReviewed)),
+              React.createElement('td',null,
+                canReview&&(s.status==='Pending'||s.status==='Under Review')
+                  &&React.createElement('button',{onClick:()=>onClickReview(s),style:{fontSize:11,padding:'4px 10px'}},'Review'))))))));
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   REVIEW
+   ══════════════════════════════════════════════════════════════════ */
+function ReviewCard({s,onReview}){
+  const [status,setStatus]=useState('');
+  const [notes,setNotes]=useState(s.notes||'');
+  const [saving,setSaving]=useState(false);
+  const save=async()=>{if(!status)return;setSaving(true);await onReview(s.id,status,notes);setSaving(false);};
+  return React.createElement('div',{className:'card',style:{padding:'18px 20px'}},
+    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}},
+      React.createElement('div',null,
+        React.createElement('div',{style:{fontWeight:600,fontSize:14}},s.specSection+' – '+s.sectionTitle),
+        React.createElement('div',{style:{fontSize:12,color:'var(--text2)',marginTop:3}},s.description),
+        React.createElement('div',{style:{fontSize:12,color:'var(--text3)',marginTop:3}},'From: '+s.submittedBy+' ('+s.company+') · '+s.dateSubmitted),
+        React.createElement('div',{style:{fontSize:12,color:'var(--text3)',marginTop:2}},'To: '+s.sendToName),
+        s.attachment&&React.createElement('div',{style:{marginTop:8}},React.createElement(FileDownloadBtn,{attachment:s.attachment}))),
+      React.createElement(Badge,{status:s.status})),
+    React.createElement('div',{style:{borderTop:'1px solid var(--border)',paddingTop:12,display:'flex',gap:10,alignItems:'flex-end',flexWrap:'wrap'}},
+      React.createElement('div',{style:{flex:'1 1 180px'}},
+        React.createElement('label',null,'Decision'),
+        React.createElement('select',{value:status,onChange:e=>setStatus(e.target.value)},
+          React.createElement('option',{value:''},'— Select —'),
+          STATUSES.filter(st=>st.value!=='Pending').map(st=>React.createElement('option',{key:st.value,value:st.value},st.label)))),
+      React.createElement('div',{style:{flex:'2 1 240px'}},
+        React.createElement('label',null,'Review notes'),
+        React.createElement('input',{value:notes,onChange:e=>setNotes(e.target.value),placeholder:'Optional…'})),
+      React.createElement('button',{className:'pri',onClick:save,disabled:!status||saving,style:{padding:'8px 20px'}},
+        saving?[React.createElement(Spinner,{key:'s'}),' Saving…']:'Save review')));
+}
+
+function ReviewView({submittals,onReview,scrollTo}){
+  const ref=useRef();
+  useEffect(()=>{if(scrollTo&&ref.current){const el=ref.current.querySelector('[data-id="'+scrollTo+'"]');el&&el.scrollIntoView({behavior:'smooth',block:'center'});}},[ scrollTo]);
+  const pending=submittals.filter(s=>s.status==='Pending'||s.status==='Under Review');
+  return React.createElement('div',{ref},
+    React.createElement('div',{style:{fontSize:17,fontWeight:600,marginBottom:16}},'Items pending review'),
+    pending.length===0
+      ?React.createElement('div',{className:'card',style:{padding:'60px',textAlign:'center',color:'var(--text3)',fontSize:13}},
+          React.createElement('i',{className:'ti ti-circle-check',style:{fontSize:36,display:'block',marginBottom:10,color:'var(--success)'}}),
+          'All caught up — no pending items.')
+      :React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:12}},
+          pending.map(s=>React.createElement('div',{'data-id':s.id,key:s.id},React.createElement(ReviewCard,{s,onReview})))));
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   TEAM VIEW
+   ══════════════════════════════════════════════════════════════════ */
+function TeamView({allUsers,currentUser}){
+  return React.createElement('div',null,
+    React.createElement('div',{style:{fontSize:17,fontWeight:600,marginBottom:16}},'Project team'),
+    React.createElement('div',{className:'card'},
+      allUsers.filter(u=>!u.isAdmin).map((u,i,arr)=>
+        React.createElement('div',{key:u.id,style:{padding:'13px 16px',borderBottom:i<arr.length-1?'1px solid var(--border)':'none',display:'flex',alignItems:'center',gap:12}},
+          React.createElement(Avatar,{name:u.name,size:36}),
+          React.createElement('div',{style:{flex:1}},
+            React.createElement('div',{style:{fontWeight:500,fontSize:13}},u.name,
+              u.id===currentUser.id&&React.createElement('span',{style:{fontSize:11,color:'var(--text3)',marginLeft:6}},'(you)')),
+            React.createElement('div',{style:{fontSize:12,color:'var(--text2)',marginTop:1}},u.company+' · '+u.role)),
+          React.createElement('div',{style:{fontSize:11,color:'var(--text3)'}},u.email)))));
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ADMIN PANEL
+   ══════════════════════════════════════════════════════════════════ */
+function AdminPanel({submittals,onDeleteSubmittal,onSaveSubmittals}){
+  const [users,setUsers]=useState({});
+  const [resetModal,setResetModal]=useState(null);
+  const [newPass,setNewPass]=useState('');
+  const [confirmDel,setConfirmDel]=useState(null);
+  const [notifStatus,setNotifStatus]=useState('');
+
+  const reloadUsers=useCallback(async()=>{const u=await fbGetUsers();setUsers(u);},[]);
+  useEffect(()=>{reloadUsers();},[reloadUsers]);
+
+  const handleResetPass=async()=>{
+    if(!newPass||newPass.length<6){toast('Password must be at least 6 characters.','error');return;}
+    const all=await fbGetUsers();
+    all[resetModal.email]={...all[resetModal.email],passHash:btoa(unescape(encodeURIComponent(newPass)))};
+    await fbSetUsers(all);
+    setUsers(all);
+    setResetModal(null);setNewPass('');
+    toast('Password reset for '+resetModal.name,'success');
+  };
+
+  const handleDeleteUser=async key=>{
+    const all=await fbGetUsers();
+    delete all[key];
+    await fbSetUsers(all);
+    setUsers(all);
+    setConfirmDel(null);
+    toast('User removed.','success');
+  };
+
+  const handleSendReminders=async()=>{
+    setNotifStatus('sending');
+    const sub=await fbGetSubmittals();
+    const u=await fbGetUsers();
+    if(!emailJsReady()){toast('EmailJS not configured yet — see setup instructions.','error');setNotifStatus('');return;}
+    let count=0;
+    for(const s of sub){
+      if(s.status!=='Pending'&&s.status!=='Under Review')continue;
+      const r=u[s.sendTo]||Object.values(u).find(x=>x.id===s.sendTo);
+      if(!r?.email)continue;
+      const ok=await sendEmail(r.email,r.name,
+        '[Action Required] Submittal #'+s.no+' – '+s.sectionTitle,
+        'Hi '+r.name+',\n\nThis is a reminder that submittal #'+s.no+' ('+s.specSection+' – '+s.sectionTitle+') is pending your review.\n\nDescription: '+s.description+'\nSubmitted by: '+s.submittedBy+' ('+s.company+')\nDate: '+s.dateSubmitted+'\n\nPlease log in to the portal to complete your review:\nhttps://noemln.github.io/vigilant-bassoon/\n\n'+PROJECT+'\n'+OWNER);
+      if(ok)count++;
+    }
+    setNotifStatus('');
+    toast(count>0?'Sent '+count+' reminder email'+(count!==1?'s':'')+'.':'No pending submittals with recipients.','success');
+  };
+
+  const uList=Object.values(users).filter(u=>!u.isAdmin);
+  const emailConfigured=emailJsReady();
+  const cloudConfigured=cloudinaryReady();
+
+  return React.createElement('div',null,
+    /* EmailJS status banner */
+    !emailConfigured&&React.createElement('div',{style:{background:'var(--warn-bg)',color:'var(--warn)',border:'1px solid #f0d080',borderRadius:'var(--r)',padding:'12px 16px',marginBottom:12,fontSize:13,display:'flex',alignItems:'flex-start',gap:10}},
+      React.createElement('i',{className:'ti ti-alert-triangle',style:{fontSize:16,marginTop:1,flexShrink:0}}),
+      React.createElement('div',null,
+        React.createElement('strong',null,'Email notifications not configured. '),
+        'Open this HTML file in a text editor and fill in the ',
+        React.createElement('code',{style:{fontFamily:'var(--mono)',fontSize:12}},'EMAILJS_CONFIG'),
+        ' values at the top. See setup instructions below.')),
+    /* Cloudinary status banner */
+    !cloudConfigured&&React.createElement('div',{style:{background:'var(--info-bg)',color:'var(--info)',border:'1px solid #b0c8f0',borderRadius:'var(--r)',padding:'12px 16px',marginBottom:20,fontSize:13,display:'flex',alignItems:'flex-start',gap:10}},
+      React.createElement('i',{className:'ti ti-cloud-upload',style:{fontSize:16,marginTop:1,flexShrink:0}}),
+      React.createElement('div',null,
+        React.createElement('strong',null,'Cloudinary not configured — file uploads limited to 5 MB. '),
+        'Fill in the ',
+        React.createElement('code',{style:{fontFamily:'var(--mono)',fontSize:12}},'CLOUDINARY_CONFIG'),
+        ' values at the top of this file to enable up to 100 MB uploads. See setup instructions below.')),
+
+    /* Users table */
+    React.createElement('div',{style:{fontSize:17,fontWeight:600,marginBottom:16}},'Registered users'),
+    React.createElement('div',{className:'card',style:{marginBottom:24,overflowX:'auto'}},
+      uList.length===0
+        ?React.createElement('div',{style:{padding:'40px',textAlign:'center',color:'var(--text3)',fontSize:13}},'No users registered yet.')
+        :React.createElement('table',null,
+          React.createElement('thead',null,React.createElement('tr',null,
+            ['Name','Company','Role','Email','Actions'].map(h=>React.createElement('th',{key:h},h)))),
+          React.createElement('tbody',null,
+            uList.map(u=>React.createElement('tr',{key:u.email},
+              React.createElement('td',null,
+                React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                  React.createElement(Avatar,{name:u.name,size:28}),
+                  React.createElement('span',{style:{fontWeight:500}},u.name))),
+              React.createElement('td',null,u.company),
+              React.createElement('td',null,u.role),
+              React.createElement('td',{style:{fontFamily:'var(--mono)',fontSize:11,color:'var(--text2)'}},u.email),
+              React.createElement('td',null,
+                React.createElement('div',{style:{display:'flex',gap:6}},
+                  React.createElement('button',{onClick:()=>{setResetModal(u);setNewPass('');},style:{fontSize:11,padding:'4px 10px'}},
+                    React.createElement('i',{className:'ti ti-key',style:{fontSize:12}}),'Reset password'),
+                  React.createElement('button',{onClick:()=>setConfirmDel(u),className:'danger',style:{fontSize:11,padding:'4px 10px'}},
+                    React.createElement('i',{className:'ti ti-trash',style:{fontSize:12}}),'Remove')))))))),
+
+    /* Notification controls */
+    React.createElement('div',{style:{fontSize:17,fontWeight:600,marginBottom:14}},'Email notifications'),
+    React.createElement('div',{className:'card',style:{padding:'20px',marginBottom:24}},
+      React.createElement('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:14}},
+        'Reminders are sent automatically every ',
+        React.createElement('strong',null,NOTIFY_INTERVAL_DAYS+' days'),
+        ' to any reviewer with pending submittals when the portal is opened. You can also trigger them manually below.'),
+      React.createElement('div',{style:{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center'}},
+        React.createElement('button',{onClick:handleSendReminders,disabled:notifStatus==='sending',style:{padding:'8px 18px'}},
+          notifStatus==='sending'?[React.createElement(Spinner,{key:'s'}),' Sending…']:[React.createElement('i',{className:'ti ti-send',key:'i',style:{fontSize:14}}),' Send reminders now']),
+        !emailConfigured&&React.createElement('span',{style:{fontSize:12,color:'var(--warn)'}},
+          React.createElement('i',{className:'ti ti-alert-circle',style:{marginRight:4}}),'Configure EmailJS first'))),
+
+    /* Firebase setup instructions */
+    React.createElement('div',{style:{fontSize:17,fontWeight:600,marginBottom:14,marginTop:28}},'Firebase real-time sync setup (5 min)'),
+    React.createElement('div',{className:'card',style:{padding:'20px',marginBottom:24}},
+      React.createElement('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:12,display:'flex',alignItems:'center',gap:8}},
+        React.createElement('i',{className:'ti ti-database',style:{fontSize:15,color:'var(--accent)'}}),
+        'Required to sync submittals and users across all team members. Free tier is plenty for this project.'),
+      React.createElement('ol',{style:{fontSize:13,color:'var(--text2)',lineHeight:2,paddingLeft:20}},
+        React.createElement('li',null,'Go to ',React.createElement('a',{href:'https://console.firebase.google.com',target:'_blank',style:{color:'var(--accent)'}},'console.firebase.google.com'),' and create a new project.'),
+        React.createElement('li',null,'Click the ',React.createElement('strong',null,'</>  Web'),' icon to register a web app. Copy the ',React.createElement('code',{style:{fontFamily:'var(--mono)',fontSize:12}},'firebaseConfig'),' object shown.'),
+        React.createElement('li',null,'In the left sidebar go to ',React.createElement('strong',null,'Build → Realtime Database → Create database'),'. Choose your region and start in ',React.createElement('strong',null,'"test mode"'),' (allows reads/writes while you set up).'),
+        React.createElement('li',null,'Open this HTML file in a text editor, find the ',React.createElement('code',{style:{fontFamily:'var(--mono)',fontSize:12}},'FIREBASE_CONFIG'),' block near the top, and paste in your values.'),
+        React.createElement('li',null,'Save and re-upload the file to GitHub. All users will now share the same live database automatically.'))),
+
+    /* EmailJS setup instructions */
+    React.createElement('div',{style:{fontSize:17,fontWeight:600,marginBottom:14}},'EmailJS setup (2 min)'),
+    React.createElement('div',{className:'card',style:{padding:'20px'}},
+      React.createElement('ol',{style:{fontSize:13,color:'var(--text2)',lineHeight:2,paddingLeft:20}},
+        React.createElement('li',null,'Go to ',React.createElement('a',{href:'https://www.emailjs.com',target:'_blank',style:{color:'var(--accent)'}},'emailjs.com'),' and create a free account.'),
+        React.createElement('li',null,'Add an Email Service (Gmail, Outlook, etc.) under ',React.createElement('strong',null,'Email Services'),' — copy the Service ID.'),
+        React.createElement('li',null,'Create a template under ',React.createElement('strong',null,'Email Templates'),'. Use these variables in the template body:',
+          React.createElement('div',{style:{fontFamily:'var(--mono)',fontSize:12,background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:'10px 14px',margin:'8px 0',lineHeight:2}},
+            '{{to_name}} — recipient name\n{{subject}} — email subject\n{{message}} — full message body\n{{project}} — project name\n{{to_email}} — recipient email (set as "To email" field)')),
+        React.createElement('li',null,'Copy your ',React.createElement('strong',null,'Public Key'),' from Account → General.'),
+        React.createElement('li',null,'Open this HTML file in any text editor, find the ',
+          React.createElement('code',{style:{fontFamily:'var(--mono)',fontSize:12}},'EMAILJS_CONFIG'),
+          ' block near the top, and replace the placeholder values with your real IDs.'),
+        React.createElement('li',null,'Save and re-upload the file. Emails will now send automatically.'))),
+
+    /* Cloudinary setup instructions */
+    React.createElement('div',{style:{fontSize:17,fontWeight:600,marginBottom:14,marginTop:28}},'Cloudinary file storage setup (2 min)'),
+    React.createElement('div',{className:'card',style:{padding:'20px',marginBottom:24}},
+      React.createElement('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:12,display:'flex',alignItems:'center',gap:8}},
+        React.createElement('i',{className:'ti ti-cloud-upload',style:{fontSize:15,color:'var(--info)'}}),
+        'Enables file attachments up to ',React.createElement('strong',null,'100 MB'),'. Without this, uploads are limited to 5 MB stored in your browser.'),
+      React.createElement('ol',{style:{fontSize:13,color:'var(--text2)',lineHeight:2,paddingLeft:20}},
+        React.createElement('li',null,'Go to ',React.createElement('a',{href:'https://cloudinary.com',target:'_blank',style:{color:'var(--accent)'}},'cloudinary.com'),' and create a free account (25 GB free storage).'),
+        React.createElement('li',null,'From your Dashboard, copy your ',React.createElement('strong',null,'Cloud Name'),'.'),
+        React.createElement('li',null,'Go to ',React.createElement('strong',null,'Settings → Upload → Upload presets'),' → click ',React.createElement('strong',null,'Add upload preset'),'.'),
+        React.createElement('li',null,'Set ',React.createElement('strong',null,'Signing Mode'),' to ',React.createElement('strong',null,'"Unsigned"'),' and save. Copy the preset name.'),
+        React.createElement('li',null,'Open this HTML file in a text editor, find the ',
+          React.createElement('code',{style:{fontFamily:'var(--mono)',fontSize:12}},'CLOUDINARY_CONFIG'),
+          ' block near the top, and fill in your Cloud Name and Upload Preset.'),
+        React.createElement('li',null,'Save and re-upload the file. Files will now upload to Cloudinary and be accessible to everyone on the team.'))),
+    resetModal&&React.createElement('div',{className:'modal-bg',onClick:()=>setResetModal(null)},
+      React.createElement('div',{className:'modal',onClick:e=>e.stopPropagation()},
+        React.createElement('div',{style:{fontSize:16,fontWeight:600,marginBottom:4}},'Reset password'),
+        React.createElement('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:18}},'Setting new password for ',React.createElement('strong',null,resetModal.name)),
+        React.createElement('div',{className:'sg2'},
+          React.createElement('label',null,'New password (min. 6 characters)'),
+          React.createElement('input',{value:newPass,onChange:e=>setNewPass(e.target.value),type:'password',placeholder:'New password',
+            onKeyDown:e=>e.key==='Enter'&&handleResetPass()})),
+        React.createElement('div',{style:{display:'flex',gap:10,marginTop:18,justifyContent:'flex-end'}},
+          React.createElement('button',{onClick:()=>setResetModal(null)},'Cancel'),
+          React.createElement('button',{className:'pri',onClick:handleResetPass},'Reset password')))),
+
+    /* Confirm delete user */
+    confirmDel&&React.createElement('div',{className:'modal-bg',onClick:()=>setConfirmDel(null)},
+      React.createElement('div',{className:'modal',onClick:e=>e.stopPropagation()},
+        React.createElement('div',{style:{fontSize:16,fontWeight:600,marginBottom:4}},'Remove user?'),
+        React.createElement('div',{style:{fontSize:13,color:'var(--text2)',marginBottom:20}},
+          'This will permanently remove ',React.createElement('strong',null,confirmDel.name),' from the portal. Their submittals will remain in the log.'),
+        React.createElement('div',{style:{display:'flex',gap:10,justifyContent:'flex-end'}},
+          React.createElement('button',{onClick:()=>setConfirmDel(null)},'Cancel'),
+          React.createElement('button',{className:'danger',onClick:()=>handleDeleteUser(confirmDel.email)},
+            React.createElement('i',{className:'ti ti-trash',style:{fontSize:13}}),'Remove user')))));
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PROFILE MODAL
+   ══════════════════════════════════════════════════════════════════ */
+function ProfileModal({user,onClose,onUpdate}){
+  const [tab,setTab]=useState('email');
+  const [newEmail,setNewEmail]=useState(user.email||'');
+  const [curPass,setCurPass]=useState('');
+  const [newPass,setNewPass]=useState('');
+  const [newPass2,setNewPass2]=useState('');
+  const [err,setErr]=useState('');
+
+  const saveEmail=async()=>{
+    setErr('');
+    const e=newEmail.trim().toLowerCase();
+    if(!e)return setErr('Email cannot be empty.');
+    if(e===user.email){onClose();return;}
+    if(!curPass)return setErr('Enter your current password to confirm.');
+    if(user.isAdmin){toast('Admin email cannot be changed.','error');return;}
+    const all=await fbGetUsers();
+    const rec=all[user.email];
+    if(!rec)return setErr('Account not found.');
+    if(rec.passHash!==btoa(unescape(encodeURIComponent(curPass))))return setErr('Current password is incorrect.');
+    if(all[e]&&e!==user.email)return setErr('That email is already in use.');
+    const updated={...rec,email:e};
+    delete all[user.email];
+    all[e]=updated;
+    await fbSetUsers(all);
+    onUpdate(updated);
+    toast('Email updated.','success');
+    onClose();
+  };
+
+  const savePass=async()=>{
+    setErr('');
+    if(!curPass)return setErr('Enter your current password.');
+    if(newPass.length<6)return setErr('New password must be at least 6 characters.');
+    if(newPass!==newPass2)return setErr('New passwords do not match.');
+    if(user.isAdmin){toast('Admin password cannot be changed here.','error');return;}
+    const all=await fbGetUsers();
+    const rec=all[user.email];
+    if(!rec)return setErr('Account not found.');
+    if(rec.passHash!==btoa(unescape(encodeURIComponent(curPass))))return setErr('Current password is incorrect.');
+    all[user.email]={...rec,passHash:btoa(unescape(encodeURIComponent(newPass)))};
+    await fbSetUsers(all);
+    toast('Password updated.','success');
+    onClose();
+  };
+
+  const tabBtn=(id,label)=>React.createElement('button',{
+    onClick:()=>{setTab(id);setErr('');},
+    style:{flex:1,padding:'8px',fontSize:13,border:'none',borderRadius:'var(--r)',cursor:'pointer',
+           background:tab===id?'var(--surface)':'transparent',
+           fontWeight:tab===id?600:400,color:tab===id?'var(--text)':'var(--text2)',
+           transition:'background .15s',boxShadow:tab===id?'0 1px 3px rgba(0,0,0,.08)':'none'}},label);
+
+  return React.createElement('div',{className:'modal-bg',onClick:onClose},
+    React.createElement('div',{className:'modal',onClick:e=>e.stopPropagation(),style:{maxWidth:420}},
+      React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}},
+        React.createElement('div',null,
+          React.createElement('div',{style:{fontSize:16,fontWeight:600}},'My Profile'),
+          React.createElement('div',{style:{fontSize:12,color:'var(--text3)',marginTop:2}},user.name+' · '+user.company)),
+        React.createElement('button',{className:'ghost',onClick:onClose,style:{fontSize:18,padding:'2px 8px',color:'var(--text3)'}},'✕')),
+      React.createElement('div',{style:{display:'flex',gap:4,marginBottom:20,background:'var(--bg)',borderRadius:'var(--r)',padding:4}},
+        tabBtn('email','Change Email'),
+        tabBtn('password','Change Password')),
+      err&&React.createElement('div',{style:{background:'var(--danger-bg)',color:'var(--danger)',borderRadius:'var(--r)',padding:'9px 12px',fontSize:12,marginBottom:14,display:'flex',alignItems:'center',gap:6}},
+        React.createElement('i',{className:'ti ti-alert-circle',style:{fontSize:14}}),err),
+      tab==='email'&&React.createElement('div',{className:'sg'},
+        React.createElement('div',null,
+          React.createElement('label',null,'New email address'),
+          React.createElement('input',{type:'email',value:newEmail,onChange:e=>setNewEmail(e.target.value),placeholder:'you@company.com'})),
+        React.createElement('div',null,
+          React.createElement('label',null,'Current password (to confirm)'),
+          React.createElement('input',{type:'password',value:curPass,onChange:e=>setCurPass(e.target.value),placeholder:'Your current password',
+            onKeyDown:e=>e.key==='Enter'&&saveEmail()})),
+        React.createElement('div',{style:{display:'flex',gap:10,justifyContent:'flex-end',marginTop:4}},
+          React.createElement('button',{onClick:onClose},'Cancel'),
+          React.createElement('button',{className:'pri',onClick:saveEmail},'Save email'))),
+      tab==='password'&&React.createElement('div',{className:'sg'},
+        React.createElement('div',null,
+          React.createElement('label',null,'Current password'),
+          React.createElement('input',{type:'password',value:curPass,onChange:e=>setCurPass(e.target.value),placeholder:'Current password'})),
+        React.createElement('div',null,
+          React.createElement('label',null,'New password'),
+          React.createElement('input',{type:'password',value:newPass,onChange:e=>setNewPass(e.target.value),placeholder:'Min. 6 characters'})),
+        React.createElement('div',null,
+          React.createElement('label',null,'Confirm new password'),
+          React.createElement('input',{type:'password',value:newPass2,onChange:e=>setNewPass2(e.target.value),placeholder:'Repeat new password',
+            onKeyDown:e=>e.key==='Enter'&&savePass()})),
+        React.createElement('div',{style:{display:'flex',gap:10,justifyContent:'flex-end',marginTop:4}},
+          React.createElement('button',{onClick:onClose},'Cancel'),
+          React.createElement('button',{className:'pri',onClick:savePass},'Save password')))));
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MAIN APP
+   ══════════════════════════════════════════════════════════════════ */
+function App(){
+  const [user,setUser]=useState(null);
+  const [submittals,setSubmittals]=useState([]);
+  const [allUsers,setAllUsers]=useState([]);
+  const [view,setView]=useState('dashboard');
+  const [reviewTarget,setReviewTarget]=useState(null);
+  const [form,setForm]=useState({specSection:'',description:'',attachment:null,notes:'',sendTo:''});
+  const [submitting,setSubmitting]=useState(false);
+  const [aiLoading,setAiLoading]=useState(false);
+  const [filterDiv,setFilterDiv]=useState('all');
+  const [filterStatus,setFilterStatus]=useState('all');
+  const [search,setSearch]=useState('');
+  const [darkMode,setDarkMode]=useState(()=>LS.get('ep_dark')||false);
+  const [profileOpen,setProfileOpen]=useState(false);
+
+  useEffect(()=>{
+    document.documentElement.setAttribute('data-theme',darkMode?'dark':'');
+    LS.set('ep_dark',darkMode);
+  },[darkMode]);
+
+  const load=useCallback(async()=>{
+    const [subs,u]=await Promise.all([fbGetSubmittals(),fbGetUsers()]);
+    setSubmittals(subs);
+    setAllUsers(Object.values(u));
+  },[]);
+
+  /* real-time listener: refresh whenever Firebase data changes */
+  useEffect(()=>{
+    if(!user)return;
+    const refS=db.ref('ep_submittals');
+    const refU=db.ref('ep_users');
+    const onSubs=snap=>{if(snap.exists())setSubmittals(JSON.parse(snap.val()));};
+    const onUsers=snap=>{if(snap.exists())setAllUsers(Object.values(JSON.parse(snap.val())));};
+    refS.on('value',onSubs);
+    refU.on('value',onUsers);
+    return()=>{refS.off('value',onSubs);refU.off('value',onUsers);};
+  },[user]);
+
+  /* on login: load data, then run notification check */
+  useEffect(()=>{
+    if(!user)return;
+    load();
+    /* deferred notification check */
+    setTimeout(async()=>{
+      const sub=await fbGetSubmittals();
+      const u=await fbGetUsers();
+      const byId={};Object.values(u).forEach(x=>{byId[x.id]=x;byId[x.email]=x;});
+      if(emailJsReady())runNotificationCheck(sub,byId);
+    },2000);
+  },[user,load]);
+
+  const save=async s=>{await fbSetSubmittals(s);setSubmittals(s);};
+
+  const handleSubmit=async()=>{
+    if(!form.specSection||!form.description.trim()||!form.sendTo)return;
+    setSubmitting(true);
+    const section=SPEC_SECTIONS.find(s=>s.section===form.specSection);
+    const recipient=allUsers.find(u=>u.id===form.sendTo);
+    const ts=Date.now();
+    const item={
+      id:ts,no:String(submittals.length+1).padStart(3,'0'),
+      specSection:form.specSection,sectionTitle:section?.title||'',division:section?.div||'',
+      description:form.description.trim(),
+      submittedBy:user.name,company:user.company,role:user.role,submittedById:user.id,
+      sendTo:form.sendTo,sendToName:recipient?.name||'',sendToCompany:recipient?.company||'',
+      dateSubmitted:fmtDate(ts),dateSubmittedTs:ts,
+      status:'Pending',dateReviewed:'',reviewedBy:'',revision:'0',
+      attachment:form.attachment||null,notes:form.notes.trim(),lastNotified:0,
+    };
+    const updated=[...submittals,item];
+    save(updated);
+    /* send initial notification */
+    if(recipient?.email&&emailJsReady()){
+      await sendEmail(recipient.email,recipient.name,
+        '[New Submittal] #'+item.no+' – '+item.sectionTitle,
+        'Hi '+recipient.name+',\n\nA new submittal has been sent to you for review:\n\n'+
+        '  Submittal #:  '+item.no+'\n  Section:      '+item.specSection+' – '+item.sectionTitle+'\n'+
+        '  Description:  '+item.description+'\n  Submitted by: '+user.name+' ('+user.company+')\n  Date:         '+item.dateSubmitted+
+        '\n\nPlease log in to the portal to review this submittal:\nhttps://noemln.github.io/vigilant-bassoon/\n\n'+PROJECT+'\n'+OWNER);
+      await fbSetSubmittals(updated.map(s=>s.id===ts?{...s,lastNotified:ts}:s));
+    }
+    setForm({specSection:'',description:'',attachment:null,notes:'',sendTo:''});
+    setView('log');
+    setSubmitting(false);
+    toast('Submittal #'+item.no+' submitted.','success');
+  };
+
+  const handleAiAssist=async()=>{
+    if(!form.description)return;
+    setAiLoading(true);
+    try{
+      const list=SPEC_SECTIONS.map(s=>s.section+': '+s.title).join('\n');
+      const res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:50,
+          messages:[{role:'user',content:'Submittal: "'+form.description+'"\n\nSections:\n'+list+'\n\nReply ONLY with the 6-digit section number.'}]})});
+      const data=await res.json();
+      const match=data.content?.[0]?.text?.trim().match(/\d{6}/)?.[0];
+      if(match&&SPEC_SECTIONS.find(s=>s.section===match))setForm(f=>({...f,specSection:match}));
+    }catch{}
+    setAiLoading(false);
+  };
+
+  const handleReview=async(id,status,notes)=>{
+    const updated=submittals.map(s=>s.id!==id?s:{...s,status,
+      dateReviewed:fmtDate(Date.now()),reviewedBy:user.name,notes:notes||s.notes});
+    save(updated);
+    const s=updated.find(x=>x.id===id);
+    /* notify submitter of outcome */
+    const submitter=allUsers.find(u=>u.id===s?.submittedById);
+    if(submitter?.email&&emailJsReady()&&s){
+      await sendEmail(submitter.email,submitter.name,
+        '[Submittal '+status+'] #'+s.no+' – '+s.sectionTitle,
+        'Hi '+submitter.name+',\n\nYour submittal has been reviewed:\n\n'+
+        '  Submittal #:  '+s.no+'\n  Section:      '+s.specSection+' – '+s.sectionTitle+'\n'+
+        '  Decision:     '+status+'\n  Reviewed by:  '+user.name+'\n'+
+        (notes?'  Notes:       '+notes+'\n':'')+
+        '\nhttps://noemln.github.io/vigilant-bassoon/\n\n'+PROJECT+'\n'+OWNER);
+    }
+    toast('Review saved.','success');
+  };
+
+  if(!user)return React.createElement(AuthScreen,{onAuth:setUser});
+
+  const canReview=user.role==='Architect/Engineer'||user.role==='Owner'||user.isAdmin;
+  const stats={
+    total:submittals.length,
+    pending:submittals.filter(s=>s.status==='Pending').length,
+    approved:submittals.filter(s=>s.status==='Approved'||s.status==='Approved as Noted').length,
+    needsAction:submittals.filter(s=>s.status==='Revise & Resubmit'||s.status==='Rejected').length,
+  };
+  const filtered=submittals.filter(s=>{
+    if(filterDiv!=='all'&&s.division!==filterDiv)return false;
+    if(filterStatus!=='all'&&s.status!==filterStatus)return false;
+    if(search&&!`${s.specSection} ${s.sectionTitle} ${s.description} ${s.submittedBy} ${s.company} ${s.sendToName}`.toLowerCase().includes(search.toLowerCase()))return false;
+    return true;
+  });
+
+  const TABS=[
+    {id:'dashboard',label:'Dashboard',icon:'ti-layout-dashboard'},
+    {id:'submit',label:'New submittal',icon:'ti-upload'},
+    {id:'log',label:'Log ('+submittals.length+')',icon:'ti-list'},
+    ...(canReview?[{id:'review',label:'Review ('+stats.pending+')',icon:'ti-clipboard-check'}]:[]),
+    {id:'team',label:'Team ('+allUsers.filter(u=>!u.isAdmin).length+')',icon:'ti-users'},
+    ...(user.isAdmin?[{id:'admin',label:'Admin',icon:'ti-shield'}]:[]),
+  ];
+
+  return React.createElement('div',{style:{fontFamily:'var(--font)',color:'var(--text)',minHeight:'100vh',background:'var(--bg)'}},
+    /* Header */
+    React.createElement('div',{style:{background:'var(--surface)',borderBottom:'1px solid var(--border)',padding:'13px 28px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,boxShadow:'0 1px 0 rgba(0,0,0,.04)'}},
+      React.createElement('div',null,
+        React.createElement('div',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--text3)',letterSpacing:'.1em',textTransform:'uppercase',marginBottom:2}},OWNER),
+        React.createElement('div',{style:{fontSize:15,fontWeight:600,letterSpacing:'-.3px'}},PROJECT+' — Submittal Portal')),
+      React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8}},
+        /* Dark mode toggle */
+        React.createElement('button',{className:'ghost',onClick:()=>setDarkMode(d=>!d),
+          title:darkMode?'Switch to light mode':'Switch to dark mode',
+          style:{fontSize:18,padding:'5px 8px',color:'var(--text2)',borderRadius:'var(--r)'}},
+          React.createElement('i',{className:'ti '+(darkMode?'ti-sun':'ti-moon')})),
+        /* Clickable profile area */
+        React.createElement('button',{className:'ghost',onClick:()=>setProfileOpen(true),
+          style:{display:'flex',alignItems:'center',gap:10,padding:'5px 10px',borderRadius:'var(--r)',cursor:'pointer',border:'1px solid transparent'},
+          title:'My profile'},
+          React.createElement(Avatar,{name:user.name,size:30,isAdmin:user.isAdmin}),
+          React.createElement('div',{style:{textAlign:'right'}},
+            React.createElement('div',{style:{fontSize:13,fontWeight:500}},user.name,
+              user.isAdmin&&React.createElement('span',{className:'badge badge-admin',style:{marginLeft:6,fontSize:10}},'Admin')),
+            React.createElement('div',{style:{fontSize:11,color:'var(--text3)'}},user.company+' · '+user.role))),
+        React.createElement('button',{className:'ghost',onClick:()=>setUser(null),style:{fontSize:12,padding:'6px 12px',color:'var(--text2)',borderRadius:'var(--r)'}},
+          React.createElement('i',{className:'ti ti-logout',style:{fontSize:14}}), ' Sign out'))),
+    /* Nav */
+    React.createElement('div',{style:{background:'var(--surface2)',borderBottom:'1px solid var(--border)',padding:'10px 28px',display:'flex',gap:4,flexWrap:'wrap',alignItems:'center'}},
+      TABS.map(t=>React.createElement('button',{key:t.id,className:'tab'+(view===t.id?' active':''),onClick:()=>setView(t.id)},
+        React.createElement('i',{className:'ti '+t.icon,style:{fontSize:14},ariaHidden:'true'}),t.label)),
+      React.createElement('button',{className:'tab',onClick:load,style:{marginLeft:'auto'},title:'Refresh'},
+        React.createElement('i',{className:'ti ti-refresh',style:{fontSize:14}}),'\u00a0Refresh')),
+    /* Content */
+    React.createElement('div',{style:{padding:'28px',maxWidth:1400}},
+      view==='dashboard'&&React.createElement(Dashboard,{stats,submittals,setView}),
+      view==='submit'&&React.createElement(SubmitForm,{form,setForm,onSubmit:handleSubmit,onAiAssist:handleAiAssist,submitting,aiLoading,user,allUsers}),
+      view==='log'&&React.createElement(LogView,{submittals:filtered,filterDiv,setFilterDiv,filterStatus,setFilterStatus,search,setSearch,canReview,
+        onClickReview:s=>{setReviewTarget(s.id);setView('review');}}),
+      view==='review'&&canReview&&React.createElement(ReviewView,{submittals,onReview:handleReview,scrollTo:reviewTarget}),
+      view==='team'&&React.createElement(TeamView,{allUsers,currentUser:user}),
+      view==='admin'&&user.isAdmin&&React.createElement(AdminPanel,{submittals,onSaveSubmittals:save})),
+    /* Profile modal */
+    profileOpen&&React.createElement(ProfileModal,{user,onClose:()=>setProfileOpen(false),onUpdate:u=>{setUser(u);load();}}));
+}
+
+/* Spinner keyframe */
+const style=document.createElement('style');
+style.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
+document.head.appendChild(style);
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
