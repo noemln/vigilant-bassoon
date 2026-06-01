@@ -540,7 +540,7 @@ async function runNotificationCheck(submittals,users){
       `  Description:  ${s.description}\n`+
       `  Submitted by: ${s.submittedBy} (${s.company})\n`+
       `  Date:         ${s.dateSubmitted}\n\n`+
-      `Please log in to the portal to review and approve or return this submittal https://noemln.github.io/vigilant-bassoon/.\n\n`+
+      `Please log in to the portal to review and approve or return this submittal https://noemln.github.io/EsaSubmittal-Portal/.\n\n`+
       `${PROJECT}\n${OWNER}`;
 
     const ok=await sendEmail(recipient.email,recipient.name,subject,body);
